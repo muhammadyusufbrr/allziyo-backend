@@ -1,15 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
-const { protect } = require('../middleware/authMiddleware'); // Himoya (Login talab qilinadi)
+const multer = require('multer');
+const path = require('path');
 
-// --- OCHIQ YO'LLAR (Hamma uchun) ---
-router.get('/', productController.getAllProducts);       // Hamma mahsulotlar
-router.get('/:id', productController.getProductById);    // Bitta mahsulot (Batafsil ko'rish uchun)
+// --- MULTER SOZLAMASI (Rasm yuklash uchun) ---
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Rasmlar 'uploads' papkasiga tushadi
+    },
+    filename: (req, file, cb) => {
+        // Rasm nomini unikal qilamiz: vaqt + original nom
+        cb(null, Date.now() + path.extname(file.originalname)); 
+    }
+});
+const upload = multer({ storage: storage });
 
-// --- YOPIQ YO'LLAR (Faqat Admin Token bilan) ---
-router.post('/', protect, productController.createProduct);      // Qo'shish
-router.put('/:id', protect, productController.updateProduct);    // Tahrirlash (UPDATE)
-router.delete('/:id', protect, productController.deleteProduct); // O'chirish
+
+// --- YO'LLAR ---
+
+// 1. Tovar qo'shish (Admin) - 'images' nomi bilan 5 tagacha rasm yuklash mumkin
+router.post('/add', upload.array('images', 5), productController.createProduct);
+
+// 2. Hamma tovarlar (User)
+router.get('/', productController.getAllProducts);
+
+// 3. Bitta tovar
+router.get('/:id', productController.getProductById);
+
+// 4. O'chirish (Admin)
+router.delete('/:id', productController.deleteProduct);
+router.put('/:id', upload.array('images', 5), productController.updateProduct);
 
 module.exports = router;

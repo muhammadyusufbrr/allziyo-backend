@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const orderController = require('../controllers/orderController');
+const { getAllOrders, getOrderById, updateOrderStatus, createOrder } = require('../controllers/orderController');
 
-router.post('/', orderController.createOrder);
-router.get('/', orderController.getAllOrders);
-
+router.get('/', getAllOrders);
+router.get('/:id', getOrderById);
+router.put('/:id/status', updateOrderStatus);
+router.post('/', createOrder);
 module.exports = router;

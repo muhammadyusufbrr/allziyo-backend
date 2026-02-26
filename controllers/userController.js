@@ -61,3 +61,40 @@ exports.saveCardNumber = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Karta raqami saqlandi", data: user });
 };
+exports.getAllUsers = async (req, res) => {
+    try {
+        // Eng yangi qo'shilganlar tepada chiqadi (createdAt: -1)
+        const users = await User.find().sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: users });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// ... boshqa funksiyalar ...
+
+// 🔥 Userni ID orqali tahrirlash (Edit)
+exports.updateUserById = async (req, res) => {
+    try {
+        const { firstName, phoneNumber } = req.body;
+        // Faqat Ism va Telefonni o'zgartirishga ruxsat beramiz
+        const user = await User.findByIdAndUpdate(
+            req.params.id, 
+            { firstName, phoneNumber },
+            { new: true }
+        );
+        res.status(200).json({ success: true, data: user });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// 🔥 Userni o'chirish (Delete)
+exports.deleteUser = async (req, res) => {
+    try {
+        await User.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: "User o'chirildi" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
