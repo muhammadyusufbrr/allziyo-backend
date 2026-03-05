@@ -53,14 +53,13 @@ exports.getMessages = async (req, res) => {
 };
 
 // 3. Userlar ro'yxati (🔥 MUKKAMMAL VERSIYA)
-// Bu yerda biz User + O'qilmaganlar soni + Oxirgi xabarni bitta qilib qaytaramiz
 exports.getChatUsers = async (req, res) => {
     try {
         const users = await User.aggregate([
             // A) Message jadvalidan shu userga tegishli xabarlarni olib kelamiz
             {
                 $lookup: {
-                    from: 'messages',         // Baza jadvali nomi (odatda kichik harfda va ko'plikda)
+                    from: 'messages',
                     localField: '_id',
                     foreignField: 'userId',
                     as: 'messages'
@@ -69,7 +68,7 @@ exports.getChatUsers = async (req, res) => {
             // B) Kerakli maydonlarni hisoblaymiz
             {
                 $addFields: {
-                    // O'qilmagan xabarlar soni (Faqat user yozgan va o'qilmagan)
+                    // O'qilmagan xabarlar soni
                     unreadCount: {
                         $size: {
                             $filter: {
@@ -84,19 +83,27 @@ exports.getChatUsers = async (req, res) => {
                             }
                         }
                     },
-                    // Oxirgi xabar (Eng oxirgisini olamiz)
-                    lastMessage: { $arrayElemAt: [{ $slice: ['$messages', -1] }, 0] }
+                    // Oxirgi xabar
+                    lastMessage: { $arrayElemAt: [{ $slice: ['$messages', -1] }, 0] },
+                    
+                    // 🔥 Telegram logika: Oxirgi faollik vaqtini aniqlaymiz (xabar yozilgan yoki yangi user qo'shilgan vaqt)
+                    lastActivity: {
+                        $max: [
+                            "$updatedAt", // User modeli yangilangan oxirgi vaqt
+                            "$createdAt"  // Yangi qo'shilgan bo'lsa, yaratilgan vaqti
+                        ]
+                    }
                 }
             },
-            // C) Message array juda katta bo'lib ketmasligi uchun uni olib tashlaymiz
-            { $project: { messages: 0, password: 0, __v: 0 } },
-            // D) Vaqt bo'yicha saralaymiz (Eng yangi yozganlar tepada)
-            { $sort: { updatedAt: -1 } }
+            // C) Ortiqcha ma'lumotlarni tozalaymiz
+            { $project: { messages: 0, __v: 0 } },
+            // D) Vaqt bo'yicha saralaymiz: Eng katta vaqt (eng yangi) tepada turadi
+            { $sort: { lastActivity: -1 } }
         ]);
 
         res.status(200).json({ success: true, data: users });
     } catch (error) {
-        console.error(error);
+        console.error("Userlarni olishda xatolik:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
